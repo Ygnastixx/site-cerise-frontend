@@ -3,13 +3,17 @@ import { RouterView, RouterLink } from 'vue-router'
 </script>
 
 <template>
-  <div class="app-shell">
-    <nav class="app-nav">
-      <span class="app-nav__brand">Site Cerise</span>
-      <RouterLink to="/courses" class="app-nav__link">Cours</RouterLink>
-      <RouterLink to="/sessions" class="app-nav__link">Séances</RouterLink>
-      <RouterLink to="/materiel" class="app-nav__link">Matériel</RouterLink>
-      <RouterLink to="/materiel/attribution" class="app-nav__link">Attribution</RouterLink>
+  <div id="app">
+    <nav class="navbar">
+      <div class="logo">🍒 Site Cerise</div>
+
+      <div class="links">
+        <RouterLink to="/login" class="nav-link">Connexion</RouterLink>
+        <RouterLink to="/courses" class="nav-link">Cours</RouterLink>
+        <RouterLink to="/inventory" class="nav-link">Inventaire</RouterLink>
+        <RouterLink to="/sessions" class="nav-link">Sessions</RouterLink>
+        <RouterLink to="/studio" class="nav-link">Studio</RouterLink>
+      </div>
     </nav>
 
     <main>
@@ -19,29 +23,47 @@ import { RouterView, RouterLink } from 'vue-router'
 </template>
 
 <style scoped>
-.app-nav {
-  background-color: var(--color-eni-green);
-  padding: 1rem 2rem;
+.navbar {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 2rem;
+  padding: 1rem 2rem;
+  background-color: var(--color-eni-green);
 }
 
-.app-nav__brand {
+.logo {
   color: white;
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  font-weight: bold;
 }
 
-.app-nav__link {
+.links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-link {
   color: white;
+  text-decoration: none;
   font-weight: 500;
   font-size: 0.9rem;
   opacity: 0.9;
+  transition: opacity 0.2s ease;
 }
 
-.app-nav__link:hover {
+.nav-link:hover {
   opacity: 1;
   text-decoration: underline;
+}
+
+.nav-link.router-link-active {
+  color: #ffd0d0;
+  font-weight: bold;
+  opacity: 1;
+}
+
+main {
+  min-height: calc(100vh - 70px);
+  background: #f7f7f7;
 }
 </style>
