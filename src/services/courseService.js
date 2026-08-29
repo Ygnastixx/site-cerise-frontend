@@ -33,24 +33,24 @@ export default {
   },
 
   getSections(params = {}) {
-    return api.get('/courses/sections/', { params })
+    return api.get('/sections/', { params })
   },
   getSectionTree(courseId) {
-    return api.get('/courses/sections/tree/', { params: { course: courseId } })
+    return api.get('/sections/tree/', { params: { course: courseId } })
   },
   createSection(payload) {
-    return api.post('/courses/sections/', payload)
+    return api.post('/sections/', payload)
   },
   updateSection(id, payload) {
-    return api.put(`/courses/sections/${id}/`, payload)
+    return api.put(`/sections/${id}/`, payload)
   },
   patchSection(id, payload) {
-    return api.patch(`/courses/sections/${id}/`, payload)
+    return api.patch(`/sections/${id}/`, payload)
   },
   deleteSection(id) {
-    return api.delete(`/courses/sections/${id}/`)
+    return api.delete(`/sections/${id}/`)
   },
   reorderSections(items) {
-    return api.post('/courses/sections/reorder/', { items })
+    return api.post('/sections/reorder/', { items })
   },
 }

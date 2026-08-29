@@ -1,181 +1,304 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import courseService from '@/services/courseService'
 
+const router = useRouter()
+
+// État des données
 const courses = ref([])
-const selected = ref(null)
-const sections = ref([])
 const loading = ref(false)
-const saving = ref(false)
 const error = ref('')
-const formError = ref('')
-const sectionError = ref('')
-const showCourseForm = ref(false)
-const showSectionForm = ref(false)
-const editingCourse = ref(false)
-const editingSection = ref(false)
-const search = ref('')
-const status = ref('')
 
-const statuses = [
-  { value: 'DRAFT', label: 'Brouillon' },
-  { value: 'PUBLISHED', label: 'Publié' },
-  { value: 'TRASH', label: 'Corbeille' },
-]
-const types = [
-  { value: 'TITLE', label: 'Titre' }, { value: 'TEXT', label: 'Texte' },
-  { value: 'LIST', label: 'Liste' }, { value: 'IMAGE', label: 'Image' },
-  { value: 'CODE', label: 'Code' }, { value: 'VIDEO', label: 'Vidéo' }, { value: 'LINK', label: 'Lien' },
-]
-const emptyCourse = () => ({ id: null, title: '', description: '', status: 'DRAFT', is_template: false })
-const emptySection = () => ({ id: null, parent: null, title: '', type: 'TEXT', text: '', json: '{\n  "text": ""\n}', order: 0 })
-const courseForm = ref(emptyCourse())
-const sectionForm = ref(emptySection())
+// État des filtres locaux
+const searchQuery = ref('')
+const statusFilter = ref('ALL')
 
-const flatSections = computed(() => {
-  const out = []
-  const walk = (nodes, depth = 0) => (nodes || []).forEach((n) => { out.push({ ...n, depth }); walk(n.children, depth + 1) })
-  walk(sections.value)
-  return out
+// 1. Chargement des données depuis l'API
+async function fetchCourses() {
+  loading.value = true
+  error.value = ''
+  try {
+    const { data } = await courseService.getCourses()
+    // Si la réponse est paginée (DRF standard), on prend data.results, sinon data
+    courses.value = Array.isArray(data) ? data : data.results || []
+  } catch (error) {
+    error.value = 'Impossible de charger la liste des cours.'
+  } finally {
+    loading.value = false
+  }
+}
+
+// 2. Traitement local instantané (Filtre + Recherche)
+const filteredCourses = computed(() => {
+  return courses.value.filter((course) => {
+    // Filtre par recherche textuelle (Titre ou Description)
+    const matchesSearch =
+      course.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      (course.description &&
+        course.description.toLowerCase().includes(searchQuery.value.toLowerCase()))
+
+    // Filtre par statut (Publié, Brouillon, etc.)
+    const matchesStatus = statusFilter.value === 'ALL' || course.status === statusFilter.value
+
+    return matchesSearch && matchesStatus
+  })
 })
-const parentOptions = computed(() => flatSections.value.filter((s) => s.id !== sectionForm.value.id))
-const typeLabel = (v) => types.find((t) => t.value === v)?.label || v
-const statusLabel = (v) => statuses.find((s) => s.value === v)?.label || v
-const errorMessage = (err, fallback) => {
-  const data = err.response?.data
-  if (!data) return fallback
-  if (data.detail) return data.detail
-  const first = Object.values(data)[0]
-  return Array.isArray(first) ? first[0] : first || fallback
+
+// Navigation
+function goToDetail(id) {
+  router.push(`/courses/${id}`)
 }
 
-async function load() {
-  loading.value = true; error.value = ''
-  try {
-    const { data } = await courseService.getAllCourses({ search: search.value || undefined, status: status.value || undefined })
-    courses.value = data
-    if (selected.value) {
-      const fresh = data.find((c) => c.id === selected.value.id)
-      if (fresh) selected.value = fresh
-    }
-  } catch (e) { error.value = errorMessage(e, 'Impossible de charger les cours.') }
-  finally { loading.value = false }
-}
-async function openCourse(course) {
-  try {
-    const { data } = await courseService.getCourse(course.id)
-    selected.value = data; sections.value = data.sections || []; sectionForm.value = emptySection(); editingSection.value = false
-  } catch (e) { error.value = errorMessage(e, 'Impossible de charger le cours.') }
-}
-function newCourse() { courseForm.value = emptyCourse(); editingCourse.value = false; formError.value = ''; showCourseForm.value = true }
-function editCourse(c) { courseForm.value = { id: c.id, title: c.title, description: c.description || '', status: c.status, is_template: !!c.is_template }; editingCourse.value = true; showCourseForm.value = true }
-async function saveCourse() {
-  formError.value = ''; if (!courseForm.value.title.trim()) { formError.value = 'Le titre est obligatoire.'; return }
-  saving.value = true
-  try {
-    const payload = { title: courseForm.value.title.trim(), description: courseForm.value.description, status: courseForm.value.status, is_template: courseForm.value.is_template }
-    const response = editingCourse.value ? await courseService.updateCourse(courseForm.value.id, payload) : await courseService.createCourse(payload)
-    if (editingCourse.value) courses.value = courses.value.map((c) => c.id === response.data.id ? response.data : c)
-    else { courses.value.unshift(response.data); await openCourse(response.data) }
-    showCourseForm.value = false
-  } catch (e) { formError.value = errorMessage(e, 'Enregistrement impossible.') }
-  finally { saving.value = false }
-}
-async function removeCourse(c) {
-  if (!confirm(`Supprimer définitivement « ${c.title} » ?`)) return
-  try { await courseService.deleteCourse(c.id); courses.value = courses.value.filter((x) => x.id !== c.id); if (selected.value?.id === c.id) { selected.value = null; sections.value = [] } }
-  catch (e) { alert(errorMessage(e, 'Suppression impossible.')) }
-}
-async function action(c, name) {
-  try {
-    const fn = { publish: courseService.publishCourse, trash: courseService.trashCourse, restore: courseService.restoreCourse }[name]
-    const { data } = await fn(c.id)
-    courses.value = courses.value.map((x) => x.id === data.id ? data : x)
-    if (selected.value?.id === data.id) selected.value = { ...selected.value, ...data }
-  } catch (e) { alert(errorMessage(e, 'Action impossible.')) }
-}
-async function duplicate(c) {
-  try { const { data } = await courseService.duplicateCourse(c.id); courses.value.unshift(data); await openCourse(data) }
-  catch (e) { alert(errorMessage(e, 'Duplication impossible.')) }
-}
-function newSection() { sectionForm.value = { ...emptySection(), order: flatSections.value.length }; editingSection.value = false; sectionError.value = ''; showSectionForm.value = true }
-function editSection(s) {
-  sectionForm.value = { id: s.id, parent: s.parent, title: s.title || '', type: s.type, text: s.content?.text || '', json: JSON.stringify(s.content || {}, null, 2), order: s.order }
-  editingSection.value = true; sectionError.value = ''; showSectionForm.value = true
-}
-function contentPayload() {
-  if (sectionForm.value.type === 'TEXT' || sectionForm.value.type === 'TITLE') return { text: sectionForm.value.text }
-  if (sectionForm.value.type === 'LIST') return { items: sectionForm.value.text.split('\n').map((x) => x.trim()).filter(Boolean) }
-  return JSON.parse(sectionForm.value.json || '{}')
-}
-async function saveSection() {
-  sectionError.value = ''; if (!sectionForm.value.title.trim()) { sectionError.value = 'Le titre est obligatoire.'; return }
-  saving.value = true
-  try {
-    const payload = { course: selected.value.id, parent: sectionForm.value.parent || null, title: sectionForm.value.title.trim(), type: sectionForm.value.type, content: contentPayload(), order: Number(sectionForm.value.order) || 0 }
-    if (editingSection.value) await courseService.updateSection(sectionForm.value.id, payload)
-    else await courseService.createSection(payload)
-    await openCourse(selected.value); showSectionForm.value = false
-  } catch (e) { sectionError.value = e instanceof SyntaxError ? 'Le contenu JSON est invalide.' : errorMessage(e, 'Enregistrement impossible.') }
-  finally { saving.value = false }
-}
-async function removeSection(s) {
-  if (!confirm(`Supprimer « ${s.title || s.type} » et ses sous-sections ?`)) return
-  try { await courseService.deleteSection(s.id); await openCourse(selected.value) }
-  catch (e) { alert(errorMessage(e, 'Suppression impossible.')) }
+function goToCreate() {
+  router.push('/courses/new')
 }
 
-onMounted(load)
+// Initialisation unique
+onMounted(() => {
+  fetchCourses()
+})
 </script>
 
 <template>
-  <div class="course-page">
+  <div class="courses-container">
+    <!-- En-tête avec actions principales -->
     <header class="page-header">
-      <div><p class="eyebrow">MODULE COURSES</p><h1>Gestion des cours</h1><p class="subtitle">Cours, sections hiérarchiques et publication.</p></div>
-      <button class="btn-primary" @click="newCourse">+ Nouveau cours</button>
+      <div>
+        <h1>Catalogue des Cours</h1>
+        <p class="subtitle">{{ filteredCourses.length }} cours affiché(s)</p>
+      </div>
+
+      <div class="header-actions">
+        <!-- Bouton d'actualisation manuelle -->
+        <button class="btn-secondary" :disabled="loading" @click="fetchCourses">
+          <span v-if="loading">Chargement...</span>
+          <span v-else>🔄 Actualiser</span>
+        </button>
+
+        <button class="btn-primary" @click="goToCreate">+ Nouveau cours</button>
+      </div>
     </header>
 
+    <!-- Barre d'outils (Filtres locaux) -->
     <div class="toolbar">
-      <input v-model="search" @keyup.enter="load" placeholder="Rechercher un cours..." />
-      <select v-model="status" @change="load"><option value="">Tous les statuts</option><option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option></select>
-      <button class="btn-secondary" @click="load">Actualiser</button>
-    </div>
-    <div v-if="error" class="alert">{{ error }}</div>
-    <div v-if="loading" class="state">Chargement...</div>
+      <div class="search-box">
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Rechercher par titre ou mot-clé..."
+        />
+      </div>
 
-    <div v-else class="layout">
-      <section class="card">
-        <div class="card-title"><h2>Cours</h2><span>{{ courses.length }}</span></div>
-        <div v-if="!courses.length" class="empty">Aucun cours.</div>
-        <article v-for="c in courses" :key="c.id" class="course-item" :class="{ selected: selected?.id === c.id }" @click="openCourse(c)">
-          <h3>{{ c.title }}</h3><p>{{ c.description || 'Aucune description' }}</p>
-          <div class="meta"><span class="status">{{ statusLabel(c.status) }}</span><span>{{ c.sections_count || 0 }} section(s)</span><span v-if="c.is_template">Modèle</span></div>
-          <div class="actions" @click.stop>
-            <button @click="editCourse(c)">Modifier</button><button @click="duplicate(c)">Dupliquer</button>
-            <button v-if="c.status !== 'PUBLISHED'" @click="action(c, 'publish')">Publier</button><button v-if="c.status === 'PUBLISHED'" @click="action(c, 'trash')">Corbeille</button><button v-if="c.status === 'TRASH'" @click="action(c, 'restore')">Restaurer</button><button class="danger" @click="removeCourse(c)">Supprimer</button>
-          </div>
-        </article>
-      </section>
-
-      <section class="card editor">
-        <template v-if="selected">
-          <div class="card-title"><div><p class="eyebrow">COURS #{{ selected.id }}</p><h2>{{ selected.title }}</h2></div><button class="btn-primary" @click="newSection">+ Section</button></div>
-          <div class="course-info"><p>{{ selected.description || 'Aucune description.' }}</p><div class="meta"><span class="status">{{ statusLabel(selected.status) }}</span><span>Auteur : {{ selected.author_username || selected.author_matricule }}</span></div></div>
-          <div v-if="!flatSections.length" class="empty">Aucune section.</div>
-          <article v-for="s in flatSections" :key="s.id" class="section-item">
-            <div class="section-row" :style="{ paddingLeft: `${18 + s.depth * 24}px` }"><span>↕</span><div class="section-main"><strong>{{ s.title || '(sans titre)' }}</strong><small>{{ typeLabel(s.type) }} · ordre {{ s.order }}</small></div><div class="actions"><button @click="editSection(s)">Modifier</button><button class="danger" @click="removeSection(s)">Supprimer</button></div></div>
-          </article>
-        </template>
-        <div v-else class="empty large">Sélectionnez un cours.</div>
-      </section>
+      <div class="filter-box">
+        <label>Statut :</label>
+        <select v-model="statusFilter">
+          <option value="ALL">Tous les statuts</option>
+          <option value="PUBLISHED">Publié</option>
+          <option value="DRAFT">Brouillon</option>
+        </select>
+      </div>
     </div>
 
-    <div v-if="showCourseForm" class="backdrop" @click.self="showCourseForm = false"><div class="modal"><h2>{{ editingCourse ? 'Modifier le cours' : 'Nouveau cours' }}</h2><div v-if="formError" class="alert">{{ formError }}</div><form @submit.prevent="saveCourse"><label>Titre<input v-model="courseForm.title" maxlength="255" /></label><label>Description<textarea v-model="courseForm.description" rows="5" /></label><label>Statut<select v-model="courseForm.status"><option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option></select></label><label class="check"><input type="checkbox" v-model="courseForm.is_template" /> Utiliser comme modèle</label><div class="form-actions"><button type="button" class="btn-secondary" @click="showCourseForm=false">Annuler</button><button class="btn-primary" :disabled="saving">{{ saving ? 'Enregistrement...' : 'Enregistrer' }}</button></div></form></div></div>
+    <!-- Message d'erreur -->
+    <div v-if="error" class="alert-error">{{ error }}</div>
 
-    <div v-if="showSectionForm" class="backdrop" @click.self="showSectionForm = false"><div class="modal wide"><h2>{{ editingSection ? 'Modifier la section' : 'Nouvelle section' }}</h2><div v-if="sectionError" class="alert">{{ sectionError }}</div><form @submit.prevent="saveSection"><label>Titre<input v-model="sectionForm.title" maxlength="255" /></label><div class="two"><label>Type<select v-model="sectionForm.type"><option v-for="t in types" :key="t.value" :value="t.value">{{ t.label }}</option></select></label><label>Ordre<input type="number" min="0" v-model.number="sectionForm.order" /></label></div><label>Section parente<select v-model="sectionForm.parent"><option :value="null">Aucune — racine</option><option v-for="p in parentOptions" :key="p.id" :value="p.id">{{ '— '.repeat(p.depth) }}{{ p.title || p.type }}</option></select></label><label v-if="sectionForm.type==='TEXT'||sectionForm.type==='TITLE'">Texte<textarea v-model="sectionForm.text" rows="8" /></label><label v-else-if="sectionForm.type==='LIST'">Un élément par ligne<textarea v-model="sectionForm.text" rows="8" /></label><label v-else>Contenu JSON<textarea v-model="sectionForm.json" rows="12" spellcheck="false" /></label><div class="form-actions"><button type="button" class="btn-secondary" @click="showSectionForm=false">Annuler</button><button class="btn-primary" :disabled="saving">{{ saving ? 'Enregistrement...' : 'Enregistrer' }}</button></div></form></div></div>
+    <!-- Etat de chargement initial -->
+    <div v-if="loading && !courses.length" class="loading-state">Chargement du catalogue...</div>
+
+    <!-- Grille/Liste des cours -->
+    <div v-else-if="filteredCourses.length" class="courses-grid">
+      <article
+        v-for="course in filteredCourses"
+        :key="course.id"
+        class="course-card"
+        @click="goToDetail(course.id)"
+      >
+        <div class="card-header">
+          <span class="badge" :class="course.status?.toLowerCase()">
+            {{ course.status }}
+          </span>
+          <small class="date" v-if="course.updated_at">
+            Mis à jour le {{ new Date(course.updated_at).toLocaleDateString() }}
+          </small>
+        </div>
+
+        <h2>{{ course.title }}</h2>
+        <p class="description">
+          {{ course.description || 'Aucune description disponible.' }}
+        </p>
+
+        <div class="card-footer">
+          <span class="section-count"> 📚 {{ course.sections?.length || 0 }} section(s) </span>
+          <span class="link-action">Consulter →</span>
+        </div>
+      </article>
+    </div>
+
+    <!-- Aucun résultat trouvé -->
+    <div v-else class="empty-state">
+      <p v-if="searchQuery || statusFilter !== 'ALL'">
+        Aucun cours ne correspond à tes critères de recherche.
+      </p>
+      <p v-else>Aucun cours disponible pour le moment.</p>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.course-page{max-width:1500px;margin:auto;padding:28px}.page-header,.toolbar,.card-title,.meta,.form-actions,.two,.section-row{display:flex;align-items:center}.page-header{justify-content:space-between;gap:20px;margin-bottom:20px}.eyebrow{color:var(--color-cherry-red);font-size:.75rem;font-weight:800;letter-spacing:.08em}h1{font-size:2rem;margin:3px 0}.subtitle{color:var(--color-text-muted)}.toolbar{gap:10px;margin-bottom:18px}.toolbar input{flex:1}input,select,textarea{width:100%;border:1px solid #d8dde3;border-radius:8px;padding:10px 12px;background:#fff;font:inherit}button{border:0;border-radius:7px;padding:9px 12px}.btn-primary{background:var(--color-eni-green);color:#fff}.btn-secondary{background:#eef1f3}.layout{display:grid;grid-template-columns:minmax(350px,.85fr) minmax(500px,1.4fr);gap:18px;align-items:start}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.04);overflow:hidden}.card-title{justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #edf0f2}.card-title>span{background:#f0f2f4;padding:3px 9px;border-radius:99px}.course-item{padding:16px 18px;border-bottom:1px solid #edf0f2;cursor:pointer}.course-item:hover,.course-item.selected{background:#f8faf9}.course-item p{color:var(--color-text-muted);font-size:.9rem;margin:4px 0 9px}.meta{gap:8px;flex-wrap:wrap;color:var(--color-text-muted);font-size:.78rem}.status{border-radius:99px;padding:3px 8px;font-weight:700;background:#eef1f3}.actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.actions button{background:#eef1f3;font-size:.76rem}.actions .danger{background:#fbe1e1;color:#9b111e}.editor{min-height:400px}.course-info{padding:18px 20px;border-bottom:1px solid #edf0f2}.section-item{border-bottom:1px solid #edf0f2}.section-row{min-height:64px;gap:10px;padding-top:10px;padding-bottom:10px;padding-right:18px}.section-main{flex:1}.section-main small{display:block;color:var(--color-text-muted)}.empty,.state{text-align:center;padding:30px;color:var(--color-text-muted)}.large{min-height:300px;display:grid;place-items:center}.alert{padding:11px 14px;border-radius:8px;margin-bottom:14px;background:#fff0f0;color:#a31616;border:1px solid #f2c1c1}.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:20px;z-index:50}.modal{width:min(600px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:22px}.modal.wide{width:min(780px,100%)}.modal form{display:grid;gap:14px;margin-top:18px}.modal label{display:grid;gap:6px;font-weight:600}.check{display:flex!important;align-items:center}.check input{width:auto}.two{gap:12px}.two>*{flex:1}@media(max-width:950px){.layout{grid-template-columns:1fr}.page-header{align-items:flex-start;flex-direction:column}}@media(max-width:600px){.course-page{padding:14px}.toolbar,.two{flex-direction:column;align-items:stretch}}
+.courses-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.search-box {
+  flex: 1;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.filter-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.filter-box select {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.course-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.course-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.badge.published {
+  background: #dcfce7;
+  color: #15803d;
+}
+.badge.draft {
+  background: #fef9c3;
+  color: #a16207;
+}
+.badge.archived {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.description {
+  color: #475569;
+  font-size: 0.9rem;
+  margin: 8px 0 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+}
+
+.btn-primary {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.empty-state,
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
 </style>
