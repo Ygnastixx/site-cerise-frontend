@@ -1,150 +1,121 @@
-<template>
-  <form class="equipment-form" @submit.prevent="submitForm">
-
-    <h2>
-      {{ equipment ? "Modifier le matériel" : "Ajouter un matériel" }}
-    </h2>
-
-    <div class="form-group">
-      <label>Nom</label>
-
-      <input
-        v-model="form.name"
-        type="text"
-        required
-        placeholder="Ex : Projecteur"
-      />
-    </div>
-
-    <div class="form-group">
-      <label>Description</label>
-
-      <textarea
-        v-model="form.description"
-        placeholder="Description du matériel"
-      ></textarea>
-    </div>
-
-    <div class="form-group">
-      <label>Quantité</label>
-
-      <input
-        v-model.number="form.quantity"
-        type="number"
-        min="0"
-        required
-      />
-    </div>
-
-    <div class="form-group">
-      <label>État</label>
-
-      <select v-model="form.status">
-        <option value="Disponible">Disponible</option>
-        <option value="En maintenance">En maintenance</option>
-        <option value="Hors service">Hors service</option>
-      </select>
-    </div>
-
-    <div class="actions">
-
-      <button type="submit" class="btn-primary">
-        {{ equipment ? "Enregistrer" : "Ajouter" }}
-      </button>
-
-      <button
-        type="button"
-        class="btn-cancel"
-        @click="$emit('cancel')"
-      >
-        Annuler
-      </button>
-
-    </div>
-
-  </form>
-</template>
-
 <script setup>
-import { reactive } from "vue";
+import { onMounted, ref } from 'vue'
+import EquipmentList from '@/components/inventory/EquipmentList.vue'
+import EquipmentForm from '@/components/inventory/EquipmentForm.vue'
+import BaseModal from '@/components/ui/BaseModal.vue'
+import {
+  getInventory,
+  createEquipment,
+  updateEquipment,
+  deleteEquipment,
+} from '@/services/inventoryService'
 
-const props = defineProps({
-  equipment: {
-    type: Object,
-    default: null,
-  },
-});
+const equipment = ref([])
+const loading = ref(false)
+const error = ref('')
 
-const emit = defineEmits(["submit", "cancel"]);
+const showModal = ref(false)
+const editingEquipment = ref(null)
 
-const form = reactive({
-  name: props.equipment?.name || "",
-  description: props.equipment?.description || "",
-  quantity: props.equipment?.quantity || 0,
-  status: props.equipment?.status || "Disponible",
-});
+const loadEquipment = async () => {
+  loading.value = true
+  error.value = ''
+  try {
+    equipment.value = await getInventory()
+  } catch (err) {
+    console.error(err)
+    error.value = 'Impossible de charger le matériel.'
+  } finally {
+    loading.value = false
+  }
+}
 
-const submitForm = () => {
-  emit("submit", {
-    ...form,
-  });
-};
+const openCreate = () => {
+  editingEquipment.value = null
+  showModal.value = true
+}
+
+const openEdit = (item) => {
+  editingEquipment.value = item
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+  editingEquipment.value = null
+}
+
+const handleSubmit = async (payload) => {
+  try {
+    if (editingEquipment.value) {
+      await updateEquipment(editingEquipment.value.id, payload)
+    } else {
+      await createEquipment(payload)
+    }
+    closeModal()
+    await loadEquipment()
+  } catch (err) {
+    console.error(err)
+    error.value = "Impossible d'enregistrer ce matériel."
+  }
+}
+
+const handleDelete = async (item) => {
+  if (!confirm(`Supprimer « ${item.name} » ?`)) return
+  try {
+    await deleteEquipment(item.id)
+    await loadEquipment()
+  } catch (err) {
+    console.error(err)
+    error.value = 'Impossible de supprimer ce matériel.'
+  }
+}
+
+onMounted(loadEquipment)
 </script>
 
+<template>
+  <div class="inventory-page">
+    <header class="page-header">
+      <h1>Inventaire du matériel</h1>
+      <button class="btn-primary" @click="openCreate">+ Ajouter du matériel</button>
+    </header>
+
+    <EquipmentList
+      :equipment="equipment"
+      :loading="loading"
+      :error="error"
+      @edit="openEdit"
+      @delete="handleDelete"
+    />
+
+    <BaseModal
+      :show="showModal"
+      :title="editingEquipment ? 'Modifier le matériel' : 'Ajouter un matériel'"
+      @close="closeModal"
+    >
+      <EquipmentForm :equipment="editingEquipment" @submit="handleSubmit" @cancel="closeModal" />
+    </BaseModal>
+  </div>
+</template>
+
 <style scoped>
-.equipment-form {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+.inventory-page {
+  padding: 2rem;
 }
-
-.equipment-form h2 {
-  color: var(--color-eni-green);
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-label {
-  display: block;
-  font-weight: bold;
-  margin-bottom: 0.4rem;
-}
-
-input,
-textarea,
-select {
-  width: 100%;
-  padding: 0.7rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  box-sizing: border-box;
-}
-
-textarea {
-  min-height: 100px;
-}
-
-.actions {
+.page-header {
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
 }
-
-button {
-  padding: 0.6rem 1rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
 .btn-primary {
   background: var(--color-cherry-red);
   color: white;
-}
-
-.btn-cancel {
-  background: #ddd;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
 }
 </style>

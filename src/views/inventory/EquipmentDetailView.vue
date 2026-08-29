@@ -6,17 +6,9 @@
 
     <div v-else-if="equipment">
       <h1>{{ equipment.name }}</h1>
-
       <div class="detail-card">
-        <p>
-          <strong>Description :</strong>
-          {{ equipment.description || 'Aucune description' }}
-        </p>
-
-        <p>
-          <strong>Quantité :</strong>
-          {{ equipment.quantity }}
-        </p>
+        <p><strong>Description :</strong> {{ equipment.description || 'Aucune description' }}</p>
+        <p><strong>Quantité :</strong> {{ equipment.quantity }}</p>
       </div>
     </div>
 
@@ -30,13 +22,12 @@ import { useRoute } from 'vue-router'
 import api from '../../services/api'
 
 const route = useRoute()
-
 const equipment = ref(null)
 const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const response = await api.get(`/inventory/${route.params.id}/`)
+    const response = await api.get(`/inventory/equipments/${route.params.id}/`)
     equipment.value = response.data
   } catch (error) {
     console.error(error)
@@ -50,14 +41,12 @@ onMounted(async () => {
 .detail-page {
   padding: 2rem;
 }
-
 .back {
   border: none;
   background: none;
   cursor: pointer;
   margin-bottom: 1rem;
 }
-
 .detail-card {
   background: white;
   padding: 1.5rem;
