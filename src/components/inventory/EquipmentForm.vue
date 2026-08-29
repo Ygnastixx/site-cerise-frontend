@@ -1,94 +1,60 @@
 <template>
   <form class="equipment-form" @submit.prevent="submitForm">
-
     <h2>
-      {{ equipment ? "Modifier le matériel" : "Ajouter un matériel" }}
+      {{ equipment ? 'Modifier le matériel' : 'Ajouter un matériel' }}
     </h2>
 
     <div class="form-group">
       <label>Nom</label>
 
-      <input
-        v-model="form.name"
-        type="text"
-        required
-        placeholder="Ex : Projecteur"
-      />
+      <input v-model="form.name" type="text" required placeholder="Ex : Projecteur" />
     </div>
 
     <div class="form-group">
       <label>Description</label>
 
-      <textarea
-        v-model="form.description"
-        placeholder="Description du matériel"
-      ></textarea>
+      <textarea v-model="form.description" placeholder="Description du matériel"></textarea>
     </div>
 
     <div class="form-group">
       <label>Quantité</label>
 
-      <input
-        v-model.number="form.quantity"
-        type="number"
-        min="0"
-        required
-      />
-    </div>
-
-    <div class="form-group">
-      <label>État</label>
-
-      <select v-model="form.status">
-        <option value="Disponible">Disponible</option>
-        <option value="En maintenance">En maintenance</option>
-        <option value="Hors service">Hors service</option>
-      </select>
+      <input v-model.number="form.quantity" type="number" min="0" required />
     </div>
 
     <div class="actions">
-
       <button type="submit" class="btn-primary">
-        {{ equipment ? "Enregistrer" : "Ajouter" }}
+        {{ equipment ? 'Enregistrer' : 'Ajouter' }}
       </button>
 
-      <button
-        type="button"
-        class="btn-cancel"
-        @click="$emit('cancel')"
-      >
-        Annuler
-      </button>
-
+      <button type="button" class="btn-cancel" @click="$emit('cancel')">Annuler</button>
     </div>
-
   </form>
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { reactive } from 'vue'
 
 const props = defineProps({
   equipment: {
     type: Object,
     default: null,
   },
-});
+})
 
-const emit = defineEmits(["submit", "cancel"]);
+const emit = defineEmits(['submit', 'cancel'])
 
 const form = reactive({
-  name: props.equipment?.name || "",
-  description: props.equipment?.description || "",
+  name: props.equipment?.name || '',
+  description: props.equipment?.description || '',
   quantity: props.equipment?.quantity || 0,
-  status: props.equipment?.status || "Disponible",
-});
+})
 
 const submitForm = () => {
-  emit("submit", {
+  emit('submit', {
     ...form,
-  });
-};
+  })
+}
 </script>
 
 <style scoped>

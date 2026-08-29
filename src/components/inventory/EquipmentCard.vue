@@ -11,21 +11,12 @@
         <strong>Quantité :</strong>
         {{ equipment.quantity }}
       </p>
-
-      <p>
-        <strong>État :</strong>
-        {{ equipment.status }}
-      </p>
     </div>
 
     <div class="actions">
-      <button class="btn-edit" @click="$emit('edit', equipment)">
-        Modifier
-      </button>
+      <button class="btn-edit" @click="$emit('edit', equipment)">Modifier</button>
 
-      <button class="btn-delete" @click="$emit('delete', equipment)">
-        Supprimer
-      </button>
+      <button class="btn-delete" @click="$emit('delete', equipment)">Supprimer</button>
     </div>
   </div>
 </template>
@@ -36,9 +27,9 @@ defineProps({
     type: Object,
     required: true,
   },
-});
+})
 
-defineEmits(["edit", "delete"]);
+defineEmits(['edit', 'delete'])
 </script>
 
 <style scoped>

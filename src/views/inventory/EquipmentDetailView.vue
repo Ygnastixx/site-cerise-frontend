@@ -1,66 +1,49 @@
 <template>
   <div class="detail-page">
+    <button @click="$router.back()" class="back">← Retour</button>
 
-    <button @click="$router.back()" class="back">
-      ← Retour
-    </button>
-
-    <div v-if="loading">
-      Chargement...
-    </div>
+    <div v-if="loading">Chargement...</div>
 
     <div v-else-if="equipment">
-
       <h1>{{ equipment.name }}</h1>
 
       <div class="detail-card">
-
         <p>
           <strong>Description :</strong>
-          {{ equipment.description || "Aucune description" }}
+          {{ equipment.description || 'Aucune description' }}
         </p>
 
         <p>
           <strong>Quantité :</strong>
           {{ equipment.quantity }}
         </p>
-
-        <p>
-          <strong>État :</strong>
-          {{ equipment.status }}
-        </p>
-
       </div>
-
     </div>
 
-    <div v-else>
-      Matériel introuvable.
-    </div>
-
+    <div v-else>Matériel introuvable.</div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
-import api from "../../services/api";
+import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import api from '../../services/api'
 
-const route = useRoute();
+const route = useRoute()
 
-const equipment = ref(null);
-const loading = ref(true);
+const equipment = ref(null)
+const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const response = await api.get(`/inventory/${route.params.id}/`);
-    equipment.value = response.data;
+    const response = await api.get(`/inventory/${route.params.id}/`)
+    equipment.value = response.data
   } catch (error) {
-    console.error(error);
+    console.error(error)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-});
+})
 </script>
 
 <style scoped>
