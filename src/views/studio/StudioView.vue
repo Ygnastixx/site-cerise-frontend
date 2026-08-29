@@ -1,11 +1,8 @@
 <template>
   <div class="studio-page">
-
     <header>
       <h1>Studio de présentation</h1>
-      <p>
-        Choisissez un template pour créer votre présentation.
-      </p>
+      <p>Choisissez un template pour créer votre présentation.</p>
     </header>
 
     <TemplateGallery
@@ -15,90 +12,85 @@
       @select="selectTemplate"
     />
 
-    <SlidePreview
-      v-if="selectedTemplate"
-      :slide="generatedSlide"
-    />
+    <SlidePreview v-if="selectedTemplate" :slide="generatedSlide" />
 
     <div v-if="selectedTemplate" class="generator">
-
       <h2>Générer une présentation</h2>
 
-      <input
-        v-model="title"
-        type="text"
-        placeholder="Titre de la présentation"
-      />
+      <select v-model="selectedCourseId">
+        <option disabled value="">Choisissez un cours</option>
+        <option v-for="course in courses" :key="course.id" :value="course.id">
+          {{ course.title }}
+        </option>
+      </select>
 
-      <textarea
-        v-model="content"
-        placeholder="Contenu"
-      ></textarea>
-
-      <button @click="generate">
-        Générer les slides
-      </button>
-
+      <button @click="generate" :disabled="!selectedCourseId">Générer les slides</button>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref } from 'vue'
 
-import TemplateGallery from "../../components/studio/TemplateGallery.vue";
-import SlidePreview from "../../components/studio/slidePreview.vue";
+import TemplateGallery from '../../components/studio/TemplateGallery.vue'
+import SlidePreview from '../../components/studio/slidePreview.vue'
 
-import {
-  getTemplates,
-  generateSlides,
-} from "../../services/studioService";
+import { getTemplates, generateSlides } from '../../services/studioService'
+import courseService from '../../services/courseService'
 
-const templates = ref([]);
-const selectedTemplate = ref(null);
+const templates = ref([])
+const selectedTemplate = ref(null)
 
-const loading = ref(false);
-const error = ref("");
+const courses = ref([])
+const selectedCourseId = ref(null)
 
-const title = ref("");
-const content = ref("");
+const loading = ref(false)
+const error = ref('')
 
-const generatedSlide = ref(null);
+const generatedSlide = ref(null)
 
 const loadTemplates = async () => {
-  loading.value = true;
-
+  loading.value = true
   try {
-    templates.value = await getTemplates();
+    templates.value = await getTemplates()
   } catch (err) {
-    console.error(err);
-    error.value = "Impossible de charger les templates.";
+    console.error(err)
+    error.value = 'Impossible de charger les templates.'
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
+
+const loadCourses = async () => {
+  try {
+    const response = await courseService.getAllCourses()
+    courses.value = response.data
+  } catch (err) {
+    console.error(err)
+    error.value = 'Impossible de charger les cours.'
+  }
+}
 
 const selectTemplate = (template) => {
-  selectedTemplate.value = template;
-};
+  selectedTemplate.value = template
+}
 
 const generate = async () => {
+  if (!selectedCourseId.value) return
+
   try {
-    const result = await generateSlides({
-      template_id: selectedTemplate.value.id,
-      title: title.value,
-      content: content.value,
-    });
-
-    generatedSlide.value = result;
+    const result = await generateSlides({ course_id: selectedCourseId.value })
+    generatedSlide.value = result
   } catch (err) {
-    console.error(err);
-    error.value = "Erreur lors de la génération.";
+    console.error(err)
+    error.value = 'Erreur lors de la génération.'
   }
-};
+}
 
-onMounted(loadTemplates);
+onMounted(() => {
+  loadTemplates()
+  loadCourses()
+})
 </script>
 
 <style scoped>
