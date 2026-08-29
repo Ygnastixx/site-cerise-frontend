@@ -1,12 +1,14 @@
 <script setup>
 import { RouterView, RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 </script>
 
 <template>
   <div id="app">
     <nav class="navbar">
       <div class="logo">🍒 Site Cerise</div>
-
       <div class="links">
         <RouterLink to="/login" class="nav-link">Connexion</RouterLink>
         <RouterLink to="/register" class="nav-link">Inscription</RouterLink>
@@ -14,12 +16,12 @@ import { RouterView, RouterLink } from 'vue-router'
         <RouterLink to="/inventory" class="nav-link">Inventaire</RouterLink>
         <RouterLink to="/sessions" class="nav-link">Sessions</RouterLink>
         <RouterLink to="/studio" class="nav-link">Studio</RouterLink>
+        <RouterLink v-if="authStore.isAdmin" to="/admin/pending" class="nav-link"
+          >Validations</RouterLink
+        >
       </div>
     </nav>
-
-    <main>
-      <RouterView />
-    </main>
+    <main><RouterView /></main>
   </div>
 </template>
 

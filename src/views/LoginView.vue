@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const username = ref('')
 const password = ref('')
 const error = ref('')
@@ -13,19 +14,7 @@ async function handleLogin() {
   error.value = ''
   loading.value = true
   try {
-    // Appel vers l'endpoint d'obtention de token SimpleJWT de Django
-    const response = await api.post('/token/', {
-      matricule: username.value,
-      password: password.value,
-    })
-
-    // Stockage du jeton d'accès
-    localStorage.setItem('access_token', response.data.access)
-    if (response.data.refresh) {
-      localStorage.setItem('refresh_token', response.data.refresh)
-    }
-
-    // Redirection vers la page des cours
+    await authStore.login(username.value, password.value)
     router.push('/courses')
   } catch (err) {
     error.value = err.response?.data?.detail || 'Identifiants invalides ou serveur indisponible.'

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   {
@@ -17,6 +18,13 @@ const routes = [
     path: '/register',
     name: 'register',
     component: () => import('@/views/RegisterView.vue'),
+  },
+
+  {
+    path: '/admin/pending',
+    name: 'pending-users',
+    component: () => import('@/views/admin/PendingUsersView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
 
   // COURSES
@@ -92,19 +100,17 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('access_token')
+  const authStore = useAuthStore()
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+  const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin)
 
-  // 1. Redirige vers la page de login si la route exige une authentification et qu'aucun token n'existe
-  if (requiresAuth && !token) {
+  if (requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'login' })
-  }
-  // 2. Si l'utilisateur est déjà connecté et tente d'aller sur /login, on le ramène sur /courses
-  else if (to.name === 'login' && token) {
+  } else if (requiresAdmin && !authStore.isAdmin) {
     next({ name: 'course-list' })
-  }
-  // 3. Navigation autorisée
-  else {
+  } else if (to.name === 'login' && authStore.isAuthenticated) {
+    next({ name: 'course-list' })
+  } else {
     next()
   }
 })
