@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import courseService from '@/services/courseService'
 import SectionForm from '@/components/sections/editors/SectionForm.vue'
@@ -24,7 +24,36 @@ const newSection = ref({
   title: '',
   type: 'TEXT',
   content: {},
+  parentKey: null,
 })
+
+const showSectionForm = ref(false)
+
+function resetNewSection() {
+  newSection.value = { title: '', type: 'TEXT', content: {}, parentKey: null }
+}
+
+function cancelAddSection() {
+  resetNewSection()
+  showSectionForm.value = false
+}
+
+function flattenForOptions(items, depth = 0) {
+  return items.flatMap((item) => [
+    { key: item.tempId || item.id, label: '— '.repeat(depth) + item.title },
+    ...flattenForOptions(item.children || [], depth + 1),
+  ])
+}
+const sectionOptions = computed(() => flattenForOptions(form.value.sections))
+
+function findSectionByKey(items, key) {
+  for (const item of items) {
+    if ((item.tempId || item.id) === key) return item
+    const found = findSectionByKey(item.children || [], key)
+    if (found) return found
+  }
+  return null
+}
 
 // Types de sections disponibles (synchronisés avec Django models.py)
 const sectionTypes = [
@@ -38,20 +67,44 @@ const sectionTypes = [
 
 function addSectionLocal() {
   if (!newSection.value.title) return
-  form.value.sections.push({
+  const section = {
     tempId: Date.now(),
     title: newSection.value.title,
     type: newSection.value.type,
     content: { ...newSection.value.content },
-    order: form.value.sections.length,
+    order: 0,
     children: [],
-  })
-  // Réinitialisation
-  newSection.value = { title: '', type: 'TEXT', content: {} }
+  }
+
+  if (newSection.value.parentKey) {
+    const parent = findSectionByKey(form.value.sections, newSection.value.parentKey)
+    if (parent) {
+      section.order = parent.children.length
+      parent.children.push(section)
+    } else {
+      form.value.sections.push(section)
+    }
+  } else {
+    section.order = form.value.sections.length
+    form.value.sections.push(section)
+  }
+
+  resetNewSection()
+  showSectionForm.value = false
 }
 
-function removeSectionLocal(index) {
-  form.value.sections.splice(index, 1)
+function flattenForDisplay(items, depth = 0, parentArray = form.value.sections) {
+  return items.flatMap((item) => [
+    { node: item, depth, parentArray },
+    ...flattenForDisplay(item.children || [], depth + 1, item.children),
+  ])
+}
+const displaySections = computed(() => flattenForDisplay(form.value.sections))
+
+
+function removeSectionLocal(node, parentArray) {
+  const idx = parentArray.indexOf(node)
+  if (idx !== -1) parentArray.splice(idx, 1)
 }
 
 // Application d'un modèle pré-existant
@@ -90,7 +143,7 @@ async function saveCourse() {
 onMounted(async () => {
   // Charger la liste des modèles pour le sélecteur
   try {
-    const { data } = await courseService.getCourses()
+    const { data } = await courseService.getAllCourses()
     const allCourses = Array.isArray(data) ? data : data.results || []
     templates.value = allCourses.filter((c) => c.is_template)
   } catch (e) {}
@@ -147,15 +200,16 @@ onMounted(async () => {
 
           <div v-else class="sections-list">
             <div
-              v-for="(sec, idx) in form.sections"
-              :key="sec.id || sec.tempId"
+              v-for="entry in displaySections"
+              :key="entry.node.tempId || entry.node.id"
               class="section-item"
+              :style="{ marginLeft: entry.depth * 20 + 'px' }"
             >
-              <div class="section-badge">{{ sec.type }}</div>
+              <div class="section-badge">{{ entry.node.type }}</div>
               <div class="section-info">
-                <strong>{{ sec.title }}</strong>
+                <strong>{{ entry.node.title }}</strong>
               </div>
-              <button type="button" class="btn-icon danger" @click="removeSectionLocal(idx)">
+              <button type="button" class="btn-icon danger" @click="removeSectionLocal(entry.node, entry.parentArray)">
                 🗑️
               </button>
             </div>
@@ -164,21 +218,49 @@ onMounted(async () => {
 
         <!-- Formulaire d'ajout de section -->
         <section class="card add-section-card">
-          <h2>+ Ajouter une Section</h2>
-          <div class="form-group">
-            <label>Type de composant</label>
-            <select v-model="newSection.type" @change="newSection.content = {}">
-              <option v-for="t in sectionTypes" :key="t.value" :value="t.value">
-                {{ t.label }}
-              </option>
-            </select>
+          <div class="add-section-header">
+            <h2>+ Ajouter une Section</h2>
+            <button
+              v-if="!showSectionForm"
+              type="button"
+              class="btn-secondary"
+              @click="showSectionForm = true"
+            >
+              + Nouvelle section
+            </button>
           </div>
 
-          <SectionForm v-model="newSection" />
+          <div v-if="showSectionForm">
+            <div class="form-group">
+              <label>Type de composant</label>
+              <select v-model="newSection.type" @change="newSection.content = {}">
+                <option v-for="t in sectionTypes" :key="t.value" :value="t.value">
+                  {{ t.label }}
+                </option>
+              </select>
+            </div>
 
-          <button type="button" class="btn-secondary add-btn" @click="addSectionLocal">
-            Ajouter cette section au cours
-          </button>
+            <div class="form-group">
+              <label>Section parente (optionnel)</label>
+              <select v-model="newSection.parentKey">
+                <option :value="null">Aucune (section racine)</option>
+                <option v-for="opt in sectionOptions" :key="opt.key" :value="opt.key">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <SectionForm v-model="newSection" />
+
+            <div class="section-form-actions">
+              <button type="button" class="btn-secondary" @click="cancelAddSection">
+                Annuler
+              </button>
+              <button type="button" class="btn-primary" @click="addSectionLocal">
+                Ajouter cette section au cours
+              </button>
+            </div>
+          </div>
         </section>
       </main>
 
@@ -236,6 +318,24 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.add-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.add-section-header h2 {
+  margin-bottom: 0;
+}
+.section-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+.section-form-actions button {
+  flex: 1;
+}
+
 .editor-container {
   max-width: 1200px;
   margin: 0 auto;

@@ -1,39 +1,29 @@
 <template>
   <div class="session-card">
+    <h3>{{ session.theme }}</h3>
 
-    <h3>{{ session.title }}</h3>
-
-    <p>
-      <strong>Date :</strong>
-      {{ session.date }}
-    </p>
-
-    <p v-if="session.start_time">
-      <strong>Heure :</strong>
-      {{ session.start_time }}
-    </p>
+    <p><strong>Date :</strong> {{ formatSessionDate(session.date) }}</p>
 
     <p v-if="session.location">
       <strong>Lieu :</strong>
       {{ session.location }}
     </p>
 
-    <button @click="$emit('view', session)">
-      Voir les détails
-    </button>
-
+    <button @click="$emit('view', session)">Voir les détails</button>
   </div>
 </template>
 
 <script setup>
+import { formatSessionDate } from '@/utils/dateFormat'
+
 defineProps({
   session: {
     type: Object,
     required: true,
   },
-});
+})
 
-defineEmits(["view"]);
+defineEmits(['view'])
 </script>
 
 <style scoped>
@@ -43,11 +33,9 @@ defineEmits(["view"]);
   border-radius: 8px;
   padding: 1rem;
 }
-
 .session-card h3 {
   color: var(--color-eni-green);
 }
-
 button {
   background: var(--color-cherry-red);
   color: white;

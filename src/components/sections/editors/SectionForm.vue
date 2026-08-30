@@ -1,5 +1,31 @@
 <script setup>
 import { computed } from 'vue'
+import { ref } from 'vue'
+import api from '@/services/api'
+
+const uploading = ref(false)
+const uploadError = ref('')
+
+async function handleImageUpload(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  uploading.value = true
+  uploadError.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await api.post('/courses/sections/upload-image/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    updateContent('url', data.url)
+  } catch (err) {
+    console.error(err)
+    uploadError.value = "Échec de l'envoi de l'image."
+  } finally {
+    uploading.value = false
+  }
+}
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -66,16 +92,14 @@ function updateContent(field, val) {
     </div>
 
     <div v-else-if="localSection.type === 'IMAGE'" class="form-group-grid">
-      <div class="form-group">
-        <label>URL de l'image</label>
-        <input
-          :value="localSection.content.url || ''"
-          type="url"
-          placeholder="https://..."
-          @input="updateContent('url', $event.target.value)"
-        />
+      <div class="form-group col-full">
+        <label>Image</label>
+        <input type="file" accept="image/*" @change="handleImageUpload" />
+        <small v-if="uploading">Envoi en cours...</small>
+        <small v-if="uploadError" class="upload-error">{{ uploadError }}</small>
+        <img v-if="localSection.content.url" :src="localSection.content.url" class="image-preview" />
       </div>
-      <div class="form-group">
+      <div class="form-group col-full">
         <label>Légende</label>
         <input
           :value="localSection.content.caption || ''"
@@ -107,26 +131,14 @@ function updateContent(field, val) {
       </div>
     </div>
 
-    <div v-else-if="localSection.type === 'CALLOUT'" class="form-group-grid">
-      <div class="form-group">
-        <label>Style de l'encart</label>
-        <select
-          :value="localSection.content.variant || 'info'"
-          @change="updateContent('variant', $event.target.value)"
-        >
-          <option value="info">Information (Bleu)</option>
-          <option value="warning">Avertissement (Jaune)</option>
-          <option value="danger">Important (Rouge)</option>
-        </select>
-      </div>
-      <div class="form-group col-full">
-        <label>Message</label>
-        <textarea
-          :value="localSection.content.message || ''"
-          rows="3"
-          @input="updateContent('message', $event.target.value)"
-        ></textarea>
-      </div>
+    <div v-else-if="localSection.type === 'CALLOUT'" class="form-group">
+      <label>Message de l'encart</label>
+      <textarea
+        :value="localSection.content.text || ''"
+        rows="3"
+        placeholder="Message à mettre en avant..."
+        @input="updateContent('text', $event.target.value)"
+      ></textarea>
     </div>
   </div>
 </template>
@@ -156,6 +168,15 @@ function updateContent(field, val) {
 
 .col-full {
   grid-column: 1 / -1;
+}
+
+.image-preview {
+  max-width: 200px;
+  margin-top: 8px;
+  border-radius: 6px;
+}
+.upload-error {
+  color: #c0392b;
 }
 
 label {

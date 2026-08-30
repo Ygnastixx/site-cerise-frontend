@@ -2,8 +2,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import courseService from '@/services/courseService'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+
+const authStore = useAuthStore()
+
 
 // État des données
 const courses = ref([])
@@ -12,17 +16,18 @@ const error = ref('')
 
 // État des filtres locaux
 const searchQuery = ref('')
-const statusFilter = ref('ALL')
+const statusFilter = ref('ACTIVE') // 'ACTIVE' ou 'TRASH'
 
 // 1. Chargement des données depuis l'API
 async function fetchCourses() {
   loading.value = true
   error.value = ''
   try {
-    const { data } = await courseService.getCourses()
-    // Si la réponse est paginée (DRF standard), on prend data.results, sinon data
+    const params = statusFilter.value === 'TRASH' ? { status: 'TRASH' } : {}
+    const { data } = await courseService.getAllCourses(params)
     courses.value = Array.isArray(data) ? data : data.results || []
-  } catch (error) {
+  } catch (err) {
+    console.error(err)
     error.value = 'Impossible de charger la liste des cours.'
   } finally {
     loading.value = false
@@ -32,16 +37,10 @@ async function fetchCourses() {
 // 2. Traitement local instantané (Filtre + Recherche)
 const filteredCourses = computed(() => {
   return courses.value.filter((course) => {
-    // Filtre par recherche textuelle (Titre ou Description)
-    const matchesSearch =
+    return (
       course.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      (course.description &&
-        course.description.toLowerCase().includes(searchQuery.value.toLowerCase()))
-
-    // Filtre par statut (Publié, Brouillon, etc.)
-    const matchesStatus = statusFilter.value === 'ALL' || course.status === statusFilter.value
-
-    return matchesSearch && matchesStatus
+      (course.description && course.description.toLowerCase().includes(searchQuery.value.toLowerCase()))
+    )
   })
 })
 
@@ -91,11 +90,10 @@ onMounted(() => {
       </div>
 
       <div class="filter-box">
-        <label>Statut :</label>
-        <select v-model="statusFilter">
-          <option value="ALL">Tous les statuts</option>
-          <option value="PUBLISHED">Publié</option>
-          <option value="DRAFT">Brouillon</option>
+        <label>Affichage :</label>
+        <select v-model="statusFilter" @change="fetchCourses">
+          <option value="ACTIVE">Actifs</option>
+          <option v-if="authStore.isStaffOrAdmin" value="TRASH">Corbeille</option>
         </select>
       </div>
     </div>
@@ -137,7 +135,7 @@ onMounted(() => {
 
     <!-- Aucun résultat trouvé -->
     <div v-else class="empty-state">
-      <p v-if="searchQuery || statusFilter !== 'ALL'">
+      <p v-if="searchQuery || statusFilter !== 'ACTIVE'">
         Aucun cours ne correspond à tes critères de recherche.
       </p>
       <p v-else>Aucun cours disponible pour le moment.</p>

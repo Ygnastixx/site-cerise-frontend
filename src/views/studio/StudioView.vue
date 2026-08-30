@@ -12,7 +12,9 @@ import {
   generateSocialPost,
 } from '../../services/studioService'
 import courseService from '../../services/courseService'
+import PosterPreview from '../../components/studio/PosterPreview.vue'
 import { getSessions } from '../../services/sessionsService'
+import { formatSessionDate } from '../../utils/dateFormat'
 
 const authStore = useAuthStore()
 
@@ -161,21 +163,14 @@ onMounted(() => {
       <select v-model="selectedSessionIdPoster">
         <option disabled value="">Choisissez une séance</option>
         <option v-for="session in sessions" :key="session.id" :value="session.id">
-          {{ session.theme }} — {{ new Date(session.date).toLocaleDateString('fr-FR') }}
+          {{ session.theme }} — {{ formatSessionDate(session.date) }}
         </option>
       </select>
       <button @click="generateAffiche" :disabled="!selectedSessionIdPoster || posterLoading">
         {{ posterLoading ? 'Génération...' : "Générer l'affiche" }}
       </button>
 
-      <div v-if="generatedPoster" class="poster-preview">
-        <h3>{{ generatedPoster.title }}</h3>
-        <p>{{ generatedPoster.date_formatted }}</p>
-        <p>{{ generatedPoster.location }}</p>
-        <p v-if="generatedPoster.materials_needed?.length">
-          Matériel : {{ generatedPoster.materials_needed.join(', ') }}
-        </p>
-      </div>
+      <PosterPreview v-if="generatedPoster" :poster="generatedPoster" />
     </div>
 
     <div v-if="authStore.isStaffOrAdmin" class="generator">
@@ -235,7 +230,7 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.poster-preview,
+
 .post-preview {
   margin-top: 1rem;
   padding: 1rem;

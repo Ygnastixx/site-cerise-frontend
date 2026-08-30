@@ -1,72 +1,73 @@
 <template>
   <form class="session-form" @submit.prevent="submit">
-
     <h2>Nouvelle session</h2>
 
     <div>
-      <label>Titre</label>
-      <input
-        v-model="form.title"
-        type="text"
-        required
-      />
+      <label>Thème</label>
+      <input v-model="form.theme" type="text" required />
     </div>
 
     <div>
-      <label>Date</label>
-      <input
-        v-model="form.date"
-        type="date"
-        required
-      />
-    </div>
-
-    <div>
-      <label>Heure</label>
-      <input
-        v-model="form.start_time"
-        type="time"
-      />
+      <label>Date et heure</label>
+      <input v-model="form.date" type="datetime-local" required />
     </div>
 
     <div>
       <label>Lieu</label>
-      <input
-        v-model="form.location"
-        type="text"
-      />
+      <input v-model="form.location" type="text" />
     </div>
 
-    <button type="submit">
-      Créer la session
-    </button>
+    <div>
+      <label>Description</label>
+      <textarea v-model="form.description" rows="3"></textarea>
+    </div>
 
-    <button
-      type="button"
-      class="cancel"
-      @click="$emit('cancel')"
-    >
-      Annuler
-    </button>
+    <div>
+      <label>Cours associé</label>
+      <select v-model="form.course_id">
+        <option :value="null">Aucun</option>
+        <option v-for="course in courses" :key="course.id" :value="course.id">
+          {{ course.title }}
+        </option>
+      </select>
+    </div>
 
+    <button type="submit">Créer la session</button>
+    <button type="button" class="cancel" @click="$emit('cancel')">Annuler</button>
   </form>
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { onMounted, reactive, ref } from "vue";
+import courseService from "@/services/courseService";
 
 const emit = defineEmits(["submit", "cancel"]);
 
+const courses = ref([]);
+
 const form = reactive({
-  title: "",
+  theme: "",
   date: "",
-  start_time: "",
   location: "",
+  description: "",
+  course_id: null,
 });
 
 const submit = () => {
-  emit("submit", { ...form });
+  emit("submit", {
+    ...form,
+    date: form.date ? new Date(form.date).toISOString() : "",
+  });
 };
+
+onMounted(async () => {
+  try {
+    const { data } = await courseService.getAllCourses();
+    courses.value = Array.isArray(data) ? data : data.results || [];
+  } catch (err) {
+    console.error(err);
+  }
+});
 </script>
 
 <style scoped>
