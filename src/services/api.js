@@ -30,7 +30,7 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           // Demande un nouveau token d'accès via l'endpoint de refresh
-          const { data } = await axios.post('http://127.0.0.1:8000/api/token/refresh/', {
+          const { data } = await axios.post('/token/refresh/', {
             refresh: refreshToken,
           })
 

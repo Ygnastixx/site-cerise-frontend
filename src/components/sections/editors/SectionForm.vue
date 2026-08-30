@@ -130,3 +130,73 @@ function updateContent(field, val) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.section-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.col-full {
+  grid-column: 1 / -1;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1f2937;
+  background-color: #fafafa;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-cherry-red, #c0392b);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.15);
+  background-color: #ffffff;
+}
+
+textarea.code-font {
+  font-family: 'Fira Code', 'Courier New', Courier, monospace;
+  background-color: #1e1e2e;
+  color: #a6adc8;
+  border-color: #313244;
+  line-height: 1.4;
+}
+
+textarea.code-font:focus {
+  background-color: #1e1e2e;
+  color: #cdd6f4;
+}
+</style>

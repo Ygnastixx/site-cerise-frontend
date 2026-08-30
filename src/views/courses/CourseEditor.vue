@@ -212,7 +212,7 @@ onMounted(async () => {
         <!-- Charger depuis un modèle -->
         <div v-if="!isEditing && templates.length" class="card template-card">
           <h3>Charger un Modèle</h3>
-          <p class="small-text">Prremplir la structure à partir d'un modèle existant :</p>
+          <p class="small-text">Préremplir la structure à partir d'un modèle existant :</p>
           <div class="form-group">
             <select v-model="selectedTemplateId">
               <option value="">-- Choisir un modèle --</option>

@@ -1,61 +1,58 @@
-<template>
-  <form class="equipment-form" @submit.prevent="submitForm">
-    <h2>
-      {{ equipment ? 'Modifier le matériel' : 'Ajouter un matériel' }}
-    </h2>
-
-    <div class="form-group">
-      <label>Nom</label>
-
-      <input v-model="form.name" type="text" required placeholder="Ex : Projecteur" />
-    </div>
-
-    <div class="form-group">
-      <label>Description</label>
-
-      <textarea v-model="form.description" placeholder="Description du matériel"></textarea>
-    </div>
-
-    <div class="form-group">
-      <label>Quantité</label>
-
-      <input v-model.number="form.quantity" type="number" min="0" required />
-    </div>
-
-    <div class="actions">
-      <button type="submit" class="btn-primary">
-        {{ equipment ? 'Enregistrer' : 'Ajouter' }}
-      </button>
-
-      <button type="button" class="btn-cancel" @click="$emit('cancel')">Annuler</button>
-    </div>
-  </form>
-</template>
-
 <script setup>
 import { reactive } from 'vue'
 
 const props = defineProps({
-  equipment: {
-    type: Object,
-    default: null,
-  },
+  equipment: { type: Object, default: null },
 })
-
 const emit = defineEmits(['submit', 'cancel'])
 
 const form = reactive({
   name: props.equipment?.name || '',
-  description: props.equipment?.description || '',
+  brand: props.equipment?.brand || '',
+  model: props.equipment?.model || '',
+  purchase_price: props.equipment?.purchase_price || '',
   quantity: props.equipment?.quantity || 0,
+  description: props.equipment?.description || '',
 })
 
-const submitForm = () => {
-  emit('submit', {
-    ...form,
-  })
+const handleSubmit = () => {
+  emit('submit', { ...form })
 }
 </script>
+
+<template>
+  <form class="equipment-form" @submit.prevent="handleSubmit">
+    <div class="form-group">
+      <label>Nom</label>
+      <input v-model="form.name" type="text" required />
+    </div>
+    <div class="form-group">
+      <label>Marque</label>
+      <input v-model="form.brand" type="text" required />
+    </div>
+    <div class="form-group">
+      <label>Modèle</label>
+      <input v-model="form.model" type="text" required />
+    </div>
+    <div class="form-group">
+      <label>Prix d'achat (€)</label>
+      <input v-model="form.purchase_price" type="number" step="0.01" min="0" required />
+    </div>
+    <div class="form-group">
+      <label>Quantité</label>
+      <input v-model.number="form.quantity" type="number" min="0" required />
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea v-model="form.description"></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" @click="$emit('cancel')">Annuler</button>
+      <button type="submit" class="btn-primary">Enregistrer</button>
+    </div>
+  </form>
+</template>
 
 <style scoped>
 .equipment-form {

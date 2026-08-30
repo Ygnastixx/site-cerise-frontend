@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 const routes = [
   {
     path: '/',
-    redirect: '/courses',
+    redirect: '/login',
   },
 
   // AUTH

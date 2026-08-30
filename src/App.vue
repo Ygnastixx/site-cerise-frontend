@@ -1,8 +1,14 @@
 <script setup>
-import { RouterView, RouterLink } from 'vue-router'
+import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+const router = useRouter()
 const authStore = useAuthStore()
+
+function handleLogout() {
+  authStore.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -10,15 +16,23 @@ const authStore = useAuthStore()
     <nav class="navbar">
       <div class="logo">🍒 Site Cerise</div>
       <div class="links">
-        <RouterLink to="/login" class="nav-link">Connexion</RouterLink>
-        <RouterLink to="/register" class="nav-link">Inscription</RouterLink>
-        <RouterLink to="/courses" class="nav-link">Cours</RouterLink>
-        <RouterLink to="/inventory" class="nav-link">Inventaire</RouterLink>
-        <RouterLink to="/sessions" class="nav-link">Sessions</RouterLink>
-        <RouterLink to="/studio" class="nav-link">Studio</RouterLink>
-        <RouterLink v-if="authStore.isAdmin" to="/admin/pending" class="nav-link"
-          >Validations</RouterLink
-        >
+        <div v-if="!authStore.isAuthenticated" class="nav-group">
+          <RouterLink to="/login" class="nav-link">Connexion</RouterLink>
+          <RouterLink to="/register" class="nav-link">Inscription</RouterLink>
+        </div>
+
+        <div v-else class="nav-group">
+          <RouterLink to="/courses" class="nav-link">Cours</RouterLink>
+          <RouterLink to="/inventory" class="nav-link">Inventaire</RouterLink>
+          <RouterLink to="/sessions" class="nav-link">Sessions</RouterLink>
+          <RouterLink to="/studio" class="nav-link">Studio</RouterLink>
+          <RouterLink v-if="authStore.isAdmin" to="/admin/pending" class="nav-link">
+            Validations
+          </RouterLink>
+
+          <span class="account-badge">{{ authStore.matricule }} · {{ authStore.role }}</span>
+          <button class="logout-btn" @click="handleLogout">Déconnexion</button>
+        </div>
       </div>
     </nav>
     <main><RouterView /></main>
@@ -42,27 +56,67 @@ const authStore = useAuthStore()
 
 .links {
   display: flex;
-  gap: 1.5rem;
+  align-items: center;
+}
+
+/* Groupe interne pour aligner les éléments v-if / v-else */
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem; /* Aère correctement tous les liens et boutons */
 }
 
 .nav-link {
-  color: white;
+  color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
   font-weight: 500;
-  font-size: 0.9rem;
-  opacity: 0.9;
-  transition: opacity 0.2s ease;
+  font-size: 0.95rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
 .nav-link:hover {
-  opacity: 1;
-  text-decoration: underline;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.12); /* Feedback visuel doux */
+  text-decoration: none;
 }
 
+/* État actif : surlignage doux rappelant les ton cerise clair */
 .nav-link.router-link-active {
-  color: #ffd0d0;
-  font-weight: bold;
-  opacity: 1;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.22);
+  font-weight: 600;
+}
+
+/* Badge utilisateur réadapté au fond foncé (lisibilité optimale) */
+.account-badge {
+  font-size: 0.8rem;
+  color: #ffffff;
+  padding: 0.35rem 0.8rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  margin-left: 0.5rem;
+}
+
+/* Bouton de déconnexion stylisé sur fond sombre */
+.logout-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: var(--color-cherry-red);
+  border-color: var(--color-cherry-red);
+  color: #ffffff;
 }
 
 main {
