@@ -25,12 +25,16 @@ const activeComponent = computed(() => componentsMap[props.section.type] || Sect
 
 // Seule une section TITLE a besoin de son .title comme contenu affiché
 const extraProps = computed(() =>
-  props.section.type === 'TITLE' ? { title: props.section.title } : {}
+  props.section.type === 'TITLE' ? { title: props.section.title } : {},
 )
 </script>
 
 <template>
-  <div class="section-wrapper" :style="{ paddingLeft: `${section.depth * 20}px` }">
+  <div
+    class="section-wrapper"
+    :class="{ 'is-nested': section.depth > 0 }"
+    :style="{ '--depth-offset': `${section.depth * 1.25}rem` }"
+  >
     <component
       :is="activeComponent"
       :type="section.type"
@@ -51,5 +55,11 @@ const extraProps = computed(() =>
 <style scoped>
 .section-wrapper {
   margin-bottom: 18px;
+}
+
+.is-nested {
+  margin-left: var(--depth-offset, 1.25rem);
+  padding-left: 1rem;
+  border-left: 2px solid var(--color-border);
 }
 </style>

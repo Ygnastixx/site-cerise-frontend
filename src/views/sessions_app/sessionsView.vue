@@ -1,19 +1,16 @@
 <template>
   <div class="sessions-page">
-
     <header>
       <div>
         <h1>Sessions de formation</h1>
         <p>Calendrier et gestion des sessions.</p>
       </div>
 
-      <button @click="showForm = true">
-        + Nouvelle session
-      </button>
+      <button v-if="authStore.isStaffOrAdmin" @click="showForm = true">+ Nouvelle session</button>
     </header>
 
     <SessionForm
-      v-if="showForm"
+      v-if="showForm && authStore.isStaffOrAdmin"
       @submit="saveSession"
       @cancel="showForm = false"
     />
@@ -32,56 +29,54 @@
         @view="viewSession"
       />
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-import SessionCard from "../../components/sessions_app/sessionCard.vue";
-import SessionForm from "../../components/sessions_app/sessionForm.vue";
-import SessionCalendar from "../../components/sessions_app/sessionCalendar.vue";
+import SessionCard from '../../components/sessions_app/sessionCard.vue'
+import SessionForm from '../../components/sessions_app/sessionForm.vue'
+import SessionCalendar from '../../components/sessions_app/sessionCalendar.vue'
 
-import {
-  getSessions,
-  createSession,
-} from "../../services/sessionsService";
+import { getSessions, createSession } from '../../services/sessionsService'
 
-const router = useRouter();
+const router = useRouter()
 
-const sessions = ref([]);
-const showForm = ref(false);
-const error = ref("");
+const authStore = useAuthStore()
+const sessions = ref([])
+const showForm = ref(false)
+const error = ref('')
 
 const loadSessions = async () => {
   try {
-    sessions.value = await getSessions();
+    sessions.value = await getSessions()
   } catch (err) {
-    console.error(err);
-    error.value = "Impossible de charger les sessions.";
+    console.error(err)
+    error.value = 'Impossible de charger les sessions.'
   }
-};
+}
 
 const saveSession = async (data) => {
   try {
-    await createSession(data);
+    await createSession(data)
 
-    showForm.value = false;
+    showForm.value = false
 
-    await loadSessions();
+    await loadSessions()
   } catch (err) {
-    console.error(err);
-    error.value = "Erreur lors de la création de la session.";
+    console.error(err)
+    error.value = 'Erreur lors de la création de la session.'
   }
-};
+}
 
 const viewSession = (session) => {
-  router.push(`/sessions/${session.id}`);
-};
+  router.push(`/sessions/${session.id}`)
+}
 
-onMounted(loadSessions);
+onMounted(loadSessions)
 </script>
 
 <style scoped>

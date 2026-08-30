@@ -1,17 +1,25 @@
-/* Variables de couleurs et typographies issues de la maquette */
 :root {
-  --color-eni-green: #1B4D2E;      /* Vert forêt de la section Hero */
-  --color-cherry-red: #C82323;     /* Rouge Cerise des boutons et accents */
-  --color-text-dark: #1A1A1A;      /* Titres et textes sombres */
-  --color-text-muted: #555555;     /* Textes secondaires */
-  --color-bg-light: #FFFFFF;       /* Fond de page blanc/gris clair */
-  --color-bg-subtle: #F8F9FA;      /* Fond pour les cartes */
-  
-  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-eni-green: #1b4d2e;
+  --color-eni-green-light: #266b40;
+  --color-cherry-red: #c82323;
+  --color-cherry-red-hover: #b01e1e;
+  --color-text-dark: #1f2937;
+  --color-text-muted: #6b7280;
+  --color-bg-light: #f9fafb;
+  --color-bg-subtle: #f3f4f6;
+  --color-border: #e5e7eb;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+
+  --font-family:
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Réinitialisation CSS de base */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -25,7 +33,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Styles réutilisables globaux */
 a {
   color: inherit;
   text-decoration: none;
@@ -34,4 +41,38 @@ a {
 button {
   font-family: inherit;
   cursor: pointer;
+}
+
+/* Styles réutilisables pour les entrées de formulaire */
+input,
+select,
+textarea {
+  font-family: inherit;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: var(--color-text-dark);
+  font-size: 0.925rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-eni-green);
+  box-shadow: 0 0 0 3px rgba(27, 77, 46, 0.15);
+}
+
+/* Cartes standard */
+.card-ui {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
 }

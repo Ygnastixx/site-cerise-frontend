@@ -23,9 +23,11 @@ function handleLogout() {
 
         <div v-else class="nav-group">
           <RouterLink to="/courses" class="nav-link">Cours</RouterLink>
-          <RouterLink to="/inventory" class="nav-link">Inventaire</RouterLink>
           <RouterLink to="/sessions" class="nav-link">Sessions</RouterLink>
-          <RouterLink to="/studio" class="nav-link">Studio</RouterLink>
+          <div v-if="authStore.isStaffOrAdmin">
+            <RouterLink to="/studio" class="nav-link">Studio</RouterLink>
+            <RouterLink to="/inventory" class="nav-link">Inventaire</RouterLink>
+          </div>
           <RouterLink v-if="authStore.isAdmin" to="/admin/pending" class="nav-link">
             Validations
           </RouterLink>

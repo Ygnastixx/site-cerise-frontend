@@ -8,7 +8,6 @@ const router = useRouter()
 
 const authStore = useAuthStore()
 
-
 // État des données
 const courses = ref([])
 const loading = ref(false)
@@ -39,7 +38,8 @@ const filteredCourses = computed(() => {
   return courses.value.filter((course) => {
     return (
       course.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      (course.description && course.description.toLowerCase().includes(searchQuery.value.toLowerCase()))
+      (course.description &&
+        course.description.toLowerCase().includes(searchQuery.value.toLowerCase()))
     )
   })
 })
@@ -75,7 +75,9 @@ onMounted(() => {
           <span v-else>🔄 Actualiser</span>
         </button>
 
-        <button class="btn-primary" @click="goToCreate">+ Nouveau cours</button>
+        <button v-if="authStore.isStaffOrAdmin" class="btn-primary" @click="goToCreate">
+          + Nouveau cours
+        </button>
       </div>
     </header>
 
@@ -90,7 +92,7 @@ onMounted(() => {
       </div>
 
       <div class="filter-box">
-        <label>Affichage :</label>
+        <label>Afficher:</label>
         <select v-model="statusFilter" @change="fetchCourses">
           <option value="ACTIVE">Actifs</option>
           <option v-if="authStore.isStaffOrAdmin" value="TRASH">Corbeille</option>
